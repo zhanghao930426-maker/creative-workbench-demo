@@ -51,3 +51,57 @@
   body.mobile-entry.public-demo .page-project .work-nav:has(#episode-select:disabled) .tabs { grid-row: 1; }
   body.mobile-entry.public-demo .sidebar .nav a { min-height: 44px; }
 }
+
+/* Keep the first project within easy reach on phones. */
+@media (max-width: 760px) {
+  body.mobile-entry.public-demo .page-home .welcome,
+  body.mobile-entry.public-demo .page-projects .welcome { margin: 0 0 12px; }
+  body.mobile-entry.public-demo :is(.page-home,.page-projects) .welcome h1 {
+    font-size: clamp(22px, 6.1vw, 27px);
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+  body.mobile-entry.public-demo :is(.page-home,.page-projects) .welcome p {
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 0;
+  }
+  body.mobile-entry.public-demo .page-home .start-card {
+    min-height: clamp(146px, 43vw, 195px);
+    height: auto;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  body.mobile-entry.public-demo .page-home .start-card h2 {
+    font-size: clamp(22px, 6vw, 27px);
+    margin: 0 0 6px;
+  }
+  body.mobile-entry.public-demo .page-home .start-card p { margin: 0; font-size: 13px; }
+  body.mobile-entry.public-demo .page-home .section-head { margin: 13px 0 8px; }
+  body.mobile-entry.public-demo .page-home .resume-card { gap: 8px; padding: 9px; }
+  body.mobile-entry.public-demo .page-home .resume-description p { margin: 4px 0 0; }
+  body.mobile-entry.public-demo .page-home .resume-card .button-link { min-height: 44px; }
+  body.mobile-entry.public-demo .page-home .resume-card + .section-head:has(+ .grid > .project-card):not(:has(+ .grid > .project-card ~ .project-card)),
+  body.mobile-entry.public-demo .page-home .resume-card + .section-head + .grid:has(> .project-card):not(:has(> .project-card ~ .project-card)) { display: none; }
+  body.mobile-entry.public-demo .page-projects .project-tools {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 6px;
+    margin: 0 0 9px;
+  }
+  body.mobile-entry.public-demo .page-projects .project-tools .search-wrap { flex: 1 1 0; }
+  body.mobile-entry.public-demo .page-projects .project-tools .search { min-height: 44px; font-size: 16px; }
+  body.mobile-entry.public-demo .page-projects #project-sort,
+  body.mobile-entry.public-demo .page-projects .projects-footer,
+  body.mobile-entry.public-demo .project-more { display: none; }
+  body.mobile-entry.public-demo .page-projects .project-filters { gap: 6px; margin: 0 0 12px; }
+  body.mobile-entry.public-demo .page-projects .project-filters button {
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 9px;
+    font-size: 13px;
+  }
+  body.mobile-entry.public-demo .page-projects .project-card .cover { aspect-ratio: 16 / 9; }
+  body.mobile-entry.public-demo .page-projects .project-card .cover img { object-position: 50% 40%; }
+}
