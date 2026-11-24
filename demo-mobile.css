@@ -1,0 +1,53 @@
+/* Fit the public workbench around its read-only mobile controls. */
+@media (max-width: 760px) {
+  body.mobile-entry.public-demo .layout .topbar {
+    height: 54px;
+    min-height: 54px;
+    padding-inline: 12px;
+    gap: 8px;
+  }
+  body.mobile-entry.public-demo .topbar .breadcrumbs {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 6px;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  body.mobile-entry.public-demo .topbar .breadcrumbs > :not(b) { flex: none; }
+  body.mobile-entry.public-demo .topbar .breadcrumbs b {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  body.mobile-entry.public-demo .layout .topright { flex: none; gap: 6px; }
+  body.mobile-entry.public-demo .topright > [data-action="tasks"] { display: none; }
+  body.mobile-entry.public-demo .topright > .button-link {
+    min-height: 44px;
+    padding: 0 9px;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+  body.mobile-entry.public-demo .layout .topright .avatar { width: 44px; height: 44px; }
+  body.mobile-entry.public-demo .layout .main > .content {
+    padding-inline: 12px;
+    padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  }
+  body.mobile-entry.public-demo .mobile-project-cover .hero-actions { display: none; }
+  body.mobile-entry.public-demo .mobile-project-cover .hero {
+    min-height: clamp(150px, 44vw, 205px);
+    padding: 13px 14px;
+  }
+  body.mobile-entry.public-demo .mobile-project-cover .hero h1 { font-size: clamp(20px, 5.7vw, 26px); }
+  body.mobile-entry.public-demo .mobile-project-cover .hero p { line-height: 1.45; }
+  body.mobile-entry.public-demo .mobile-project-cover .hero::after {
+    background: linear-gradient(0deg, #07141af2 0%, #07141a80 53%, transparent 100%);
+  }
+  body.mobile-entry.public-demo .page-project .work-nav:has(#episode-select:disabled) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body.mobile-entry.public-demo .page-project .work-nav:has(#episode-select:disabled) > .toolbar,
+  body.mobile-entry.public-demo .page-project .work-nav > [data-action="history"]:disabled { display: none; }
+  body.mobile-entry.public-demo .page-project .work-nav:has(#episode-select:disabled) .tabs { grid-row: 1; }
+  body.mobile-entry.public-demo .sidebar .nav a { min-height: 44px; }
+}
