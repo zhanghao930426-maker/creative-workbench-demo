@@ -8,11 +8,9 @@ export function storyboardUI({state,esc,icon,badge,api,actions,workspace,replace
  let selectionEpisode=null;
  let batchDraft=null;
  const board=()=>state.episode.data.storyboard;
- async function post(body){await flushSave();await replaceEpisode(await api(`/api/episodes/${state.episode.id}/storyboard`,{method:'POST',body:{...body,revision:state.episode.revision}}));}
- async function save(){const shot=board()?.shots.find(s=>s.id===current);if(!shot)return;const changes={};document.querySelectorAll('[data-shot-field]').forEach(el=>{if(el.value!==shot[el.dataset.shotField])changes[el.dataset.shotField]=el.value;});if(Object.keys(changes).length)await post({operation:'edit',id:current,changes});}
- actions['refine-storyboard']=async()=>{await save();await api('/api/tasks',{method:'POST',body:{episodeId:state.episode.id,revision:state.episode.revision,kind:'storyboard',idempotency:crypto.randomUUID()}});state.tasks=await api('/api/tasks');workspace();toast('AI镜头细化已提交，保留对白与顺序');};
+ async function save(){}
  const oldOpenAssets=actions['open-assets'];actions['open-assets']=async()=>{if(state.tab==='storyboard')await save();await oldOpenAssets();};
- actions['open-storyboard']=async()=>{await saveAsset();await flushSave();state.tab='storyboard';workspace();};actions['prepare-storyboard']=async()=>{await post({operation:'prepare'});toast('已按场次与对白建立初始分镜，请逐镜检查');};actions['select-shot']=async el=>{
+ actions['open-storyboard']=async()=>{await saveAsset();await flushSave();state.tab='storyboard';workspace();};actions['select-shot']=async el=>{
  const id=el.dataset.id;
  const scrollTop=document.querySelector('.shot-list')?.scrollTop;
  const previousTop=el.getBoundingClientRect().top;
@@ -29,31 +27,7 @@ export function storyboardUI({state,esc,icon,badge,api,actions,workspace,replace
   const row=list?.querySelector(`[data-action="select-shot"][data-id="${CSS.escape(id)}"]`);
   if(row)window.scrollBy(0,row.getBoundingClientRect().top-previousTop);
  }
-};actions['save-shot']=async()=>{await save();toast('镜头已保存');};actions['confirm-storyboard']=async()=>{await save();await post({operation:'confirm'});toast('分镜顺序与当前镜头内容已确认');};actions['shot-image-info']=async()=>{
-   await save();
-   if(!board().confirmed){
-     modal(`<h2>先确认分镜稿</h2><p>当前分镜稿处于待检查状态。确认后即可为 ${esc(current)} 再生成候选图。</p><div class="modal-actions"><button data-action="close-modal">返回检查</button><button class="primary" data-action="confirm-before-shot-image">确认分镜稿并继续</button></div>`);
-     return;
-   }
-   modal(`<h2>生成 ${esc(current)} 分镜图</h2><p>Kling Image 3.0 Omni · 2K · 16:9 · 1 张 · 预计 ¥0.20</p><p>本镜固定版本的参考图会上传到百炼临时存储，用于生成这一镜。</p><div class="modal-actions"><button data-action="close-modal">取消</button><button class="primary" data-action="submit-shot-image" data-id="${esc(current)}">生成 1 张</button></div>`);
- };
- actions['confirm-before-shot-image']=async()=>{
-   await actions['confirm-storyboard']();
-   await actions['close-modal']();
-   await actions['shot-image-info']();
- };
- actions['submit-shot-image']=async el=>{
-   if(submitting)return;
-   submitting=true;
-   el.disabled=true;
-   try {
-     await api('/api/tasks',{method:'POST',body:{episodeId:state.episode.id,revision:state.episode.revision,kind:'storyboard-image',shotId:el.dataset.id,idempotency:crypto.randomUUID()}});
-     await actions['close-modal']();
-     state.tasks=await api('/api/tasks');
-     workspace();
-     toast('本镜生图已提交');
-   } finally {submitting=false;el.disabled=false;}
- };
+};
  function selectedListShots(){
    if(selectionEpisode!==state.episode.id){selectedShots.clear();selectionEpisode=state.episode.id;}
    return board().shots.filter(shot=>selectedShots.has(shot.id));
@@ -93,86 +67,12 @@ export function storyboardUI({state,esc,icon,badge,api,actions,workspace,replace
    for(const input of document.querySelectorAll('[data-shot-check]'))input.checked=selectAll;
    updateShotSelection();
  };
- actions['batch-shot-info']=async()=>{
-   await save();
-   const shots=selectedBatchShots();
-   if(!shots.length)throw Error('请先勾选要生成的镜头');
-   if(!board().confirmed){
-     modal(`<h2>先确认分镜稿</h2><p>确认后可继续为所选的 ${shots.length} 镜准备出图。</p><div class="modal-actions"><button data-action="close-modal">返回检查</button><button class="primary" data-action="confirm-before-shot-batch">确认分镜稿并继续</button></div>`);
-     return;
-   }
-   batchDraft={episodeId:state.episode.id,revision:state.episode.revision,shotIds:shots.map(shot=>shot.id),idempotency:crypto.randomUUID()};
-   modal(`<h2>生成所选分镜图</h2><p>${shots.length} 镜各生成 1 张候选图，2K · 16:9，预计 ¥${(shots.length*.20).toFixed(2)}。</p><p>${shots.map(shot=>esc(shot.id)).join('、')}</p><p>按分镜顺序生成，可在任务记录取消排队项。</p><div class="modal-actions"><button data-action="close-modal">返回</button><button class="primary" data-action="submit-shot-batch">提交生成</button></div>`);
- };
- actions['confirm-before-shot-batch']=async()=>{
-   await actions['confirm-storyboard']();
-   await actions['batch-shot-info']();
- };
- actions['submit-shot-batch']=async el=>{
-   if(submitting)return;
-   if(!batchDraft||batchDraft.episodeId!==state.episode.id||batchDraft.revision!==state.episode.revision)throw Error('分镜已变化，请重新预览');
-   submitting=true;
-   el.disabled=true;
-   try{
-     const tasks=await api('/api/tasks',{method:'POST',body:{kind:'storyboard-image',...batchDraft}});
-     batchDraft=null;
-     selectedShots.clear();
-     await actions['close-modal']();
-     await actions['tasks']();
-     workspace();
-     toast(`已提交 ${tasks.length} 镜生图任务`);
-   }finally{submitting=false;el.disabled=false;}
- };
- actions['share-shot-info']=async()=>{
-   await save();
-   const shots=selectedListShots(), all=board().shots, first=all.indexOf(shots[0]);
-   if(shots.length<2||shots.some((shot,index)=>shot.sceneId!==shots[0].sceneId||all[first+index]!==shot))throw Error('请勾选同一场景的相邻镜头');
-   const sources=shots.filter(shot=>!shot.sharedImage&&shot.imageCandidates?.some(image=>image.id===shot.confirmedImageId));
-   if(!sources.length)throw Error('请先在所选镜头中确认一张独立分镜图');
-   modal(`<h2>共用分镜图</h2><p>${shots.map(shot=>esc(shot.id)).join('、')}将共用一张已确认图。各镜的对白和时间点仍分别保留。</p><label class="field">选择来源镜头<select id="share-shot-source">${sources.map(shot=>`<option value="${esc(shot.id)}">${esc(shot.id)} · ${esc(shot.title)}</option>`).join('')}</select></label><div class="modal-actions"><button data-action="close-modal">返回</button><button class="primary" data-action="share-shot-submit">确认共用</button></div>`);
- };
- actions['share-shot-submit']=async()=>{
-   const sourceId=document.querySelector('#share-shot-source').value;
-   await post({operation:'share-image',shotIds:selectedListShots().map(shot=>shot.id),sourceId});
-   selectedShots.clear();
-   await actions['close-modal']();
-   workspace();
-   toast('已设置共用分镜图');
- };
- actions['unshare-shot-image']=async()=>{
-   const id=current;
-   await save();
-   await post({operation:'unshare-image',id});
-   toast('已解除本镜共用');
- };
  function sharedImageView(shot,busy){
    const image=shot.sharedImage;
    return `<div class="shot-image-results"><button class="shot-image-preview" data-action="preview-shot-image" aria-label="查看共用分镜大图"><img src="${esc(image.image)}" alt="共用分镜图"></button>
      <div class="shot-image-selection">${badge('共用 '+image.sourceShotId+' 的分镜图')}<button class="small" data-action="unshare-shot-image" ${busy?'disabled':''}>解除共用</button></div></div>`;
  }
 
- actions['export-storyboard']=async()=>{
-   await save();
-   await flushSave();
-   const link=document.createElement('a');
-   link.href=`/api/episodes/${encodeURIComponent(state.episode.id)}/storyboard-export`;
-   link.download='分镜包.zip';
-   link.click();
- };
- actions['refresh-shot-references']=async()=>{
-   await save();
-   const revision=state.episode.revision;
-   await post({operation:'refresh-references'});
-   toast(state.episode.revision===revision?'已是最新确认资产':'已同步本集镜头引用的确认资产');
- };
- actions['choose-shot-image']=async el=>{
-   const candidateId=el.dataset.id, shotId=current;
-   await save();
-   const shot=board().shots.find(item=>item.id===shotId);
-   const cancel=shot.confirmedImageId===candidateId;
-   await post({operation:cancel?'unconfirm-image':'confirm-image',id:shotId,candidateId});
-   toast(cancel?'已取消确认，候选图仍保留':'已确认本镜使用这张图');
- };
  actions['preview-shot-image']=el=>{
    const shot=board()?.shots.find(s=>s.id===current);
    const candidate=shot?.sharedImage||shot?.imageCandidates?.find(c=>c.id===el.dataset.id);
