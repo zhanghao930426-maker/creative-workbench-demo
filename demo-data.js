@@ -1,4 +1,11 @@
-import source from './case-source.js';
+import group1 from './shot-images-1.js';
+import group2 from './shot-images-2.js';
+import group3 from './shot-images-3.js';
+import group4 from './shot-images-4.js';
+import group5 from './shot-images-5.js';
+import group6 from './shot-images-6.js';
+import source from './case-source.js?v=3';
+const shotImages={...group1,...group2,...group3,...group4,...group5,...group6};
 const image=id=>'./assets/'+id+'.svg';
 const [story,production]=source.markdown.split(/^## 制作剧本\s*$/m);
 const [scriptText,assetText]=production.split(/^## 资产需求\s*$/m);
@@ -38,7 +45,7 @@ const shots=Object.entries(source.shots).map(([id,text])=>{
  return {id,title:text.split(/\r?\n/)[0].split(' · ')[1],sceneId:text.match(/场次：(\w+)/)?.[1],
   start:Number(start),end:Number(end),action:section('画面动作'),framing:section('景别'),angle:section('机位'),
   movement:section('运镜'),performance:section('表演'),dialogue:section('对白'),refs:[],
-  confirmedImageId:id,imageCandidates:[{id,image:image(id)}]};
+  confirmedImageId:id,imageCandidates:[{id,image:shotImages[id]??image(id)}]};
 });
 const episode={id:'sample-episode',name:'第 1 集',revision:38,stage:'分镜设计',data:{
  inspiration:{idea:'父亲想让女儿吃苦，她却把每件苦差事做出了成绩。'},
