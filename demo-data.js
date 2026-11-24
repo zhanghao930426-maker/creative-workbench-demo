@@ -1,34 +1,55 @@
-const cover = './assets/inspiration-cover.svg';
-const assets = [
-  {id:'C1',type:'character',name:'程禾',description:'灰色风衣、短发、站在长椅左边。'},
-  {id:'C2',type:'character',name:'周远',description:'墨绿夹克、右袖湿透、站在长椅右边。'},
-  {id:'L1',type:'scene',name:'公交站',description:'金属长椅与玻璃雨棚。'},
-  {id:'P1',type:'prop',name:'蓝伞',description:'深蓝布面、木弯柄。'}
-].map(asset=>({...asset,sceneIds:['S1'],candidates:[],preparation:{tier:'core',reason:'镜头连续性'}}));
-const scenes=[{id:'S1',title:'雨中等车',location_asset_id:'L1',time_of_day:'傍晚',
- character_ids:['C1','C2'],prop_ids:['P1'],start:0,end:10,
- purpose:'通过误会引出两个人的第一次交流。',
- action:'程禾把长椅上的蓝伞往周远那边推。周远翻出湿袖口。末班车进站，两人同时伸手，又同时停住。',
- performance:'程禾先移开视线，周远低头笑一下；两人伸手后停一拍。',
- dialogue:[{speaker_id:'C1',text:'你的伞。'},{speaker_id:'C2',text:'我要是有伞，就不会这样了。'}],
- voiceover:[],subtitles:[],sounds:[{kind:'ambience',description:'雨落在站棚上。'}]}];
-const manuscript={title:'雨停之前',expanded:true,ready:true,productionAudit:{ready:true},
- storyText:scenes[0].action,dimensions:{'角色与对象':'两名等车的陌生人、一把伞。','剧情与时间线':'推伞、误会、末班车进站。'},
- productionScript:{assets,scenes}};
-const episode={id:'sample-episode',name:'第 1 集',revision:1,stage:'分镜设计',data:{
- inspiration:{idea:'两个陌生人都以为公交站里的伞属于对方。'},
- manuscript,manuscriptConfirmed:{version:1,data:manuscript},
- assetPack:{scriptVersion:1,policyVersion:1,styleProfile:{preset:"realistic",context:"当代城市雨天",palette:"冷蓝、湿地暖光"},items:assets},
- storyboard:{confirmed:{version:1},shots:[
- ['全景','两人分立长椅两侧，程禾把蓝伞往右推。','你的伞。'],
- ['近景','周远翻出湿透的袖口。','我要是有伞，就不会这样了。'],
- ['特写','两只手从画面两端伸入，在伞柄上方停住。','']
- ].map(([framing,action,dialogue],i)=>({id:'SH00'+(i+1),title:framing,sceneId:'S1',framing,action,dialogue,angle:'平视',movement:'固定',performance:'用视线和停顿表现犹豫。',start:i*3,end:i===2?10:(i+1)*3,refs:[],imageCandidates:[]}))}
-}};
-const project={id:'sample',name:'雨停之前',type:'single',description:'公开演示项目 · 公交站的一把蓝伞',cover,episodes:[{id:episode.id,name:episode.name,stage:episode.stage}],episode_count:1,updated:'2026-11-24T00:00:00Z'};
+import source from './case-source.js';
+const image=id=>'./assets/'+id+'.svg';
+const [story,production]=source.markdown.split(/^## 制作剧本\s*$/m);
+const [scriptText,assetText]=production.split(/^## 资产需求\s*$/m);
+const assetSections=[...assetText.matchAll(/^### (\w+) · (.+)\r?\n([^\n]+)\r?\n([^\n]+)/gm)];
+const confirmed=new Map(source.assets.map(a=>[a.id,a]));
+const assets=assetSections.map(([,id,name,kind,description])=>{
+ const type=kind.split(' · ')[0].trim(), reference=confirmed.get(id), tier=reference?'core':'optional';
+ return {id,name,type,description,required:kind.includes('必需'),sceneIds:[],candidates:[],preparation:{tier,reason:reference?'已确认原项目参考图':'原剧本资产需求'},...(reference?{image:image(id),confirmed:{version:reference.version}}:{})};
+});
+const names=new Map(assets.map(a=>[a.name,a.id]));
+const resolve=name=>names.get(name)||name;
+const scenes=scriptText.split(/^### /m).slice(1).map(section=>{
+ const [heading,timing,...rows]=section.trim().split(/\r?\n/);
+ const [id,title]=heading.split(' · ');
+ const [,start,end,location,time]=timing.match(/^([\d.]+)[–-]([\d.]+)秒 · (.+) · (.+)$/);
+ const get=key=>rows.find(row=>row.startsWith(key+'：'))?.split('：').slice(1).join('：')||'';
+ const metadata=new Set(['人物','场次目的','动作','表演','道具','关联段落','旁白','字幕','画内文字','sfx','bgm','ambience']);
+ const dialogue=[],sounds=[];
+ for(const row of rows){
+  const colon=row.indexOf('：');if(colon<0)continue;
+  const key=row.slice(0,colon),text=row.slice(colon+1);
+  if(['sfx','bgm','ambience'].includes(key))sounds.push({kind:key,description:text});
+  else if(!metadata.has(key))dialogue.push({speaker_id:resolve(key),text});
+ }
+ const scene={id,title,start:Number(start),end:Number(end),location_asset_id:resolve(location),time_of_day:time,
+  character_ids:get('人物').split('、').filter(Boolean).map(resolve),prop_ids:get('道具').split('、').filter(Boolean).map(resolve),
+  purpose:get('场次目的'),action:get('动作'),performance:get('表演'),dialogue,sounds,voiceover:[],subtitles:[]};
+ for(const a of assets)if([scene.location_asset_id,...scene.character_ids,...scene.prop_ids].includes(a.id))a.sceneIds.push(id);
+ return scene;
+});
+const manuscript={title:'吃苦改造计划',expanded:true,ready:true,productionAudit:{ready:true},productionScript:{assets,scenes},
+ storyText:story.replace(/^# .+\r?\n|^Confirmed revision \d+\r?\n/gm,'').trim(),
+ dimensions:{'角色与对象':'父亲老周、女儿小周，以及她在不同工作中遇到的人。','剧情与时间线':'从成绩单引出的吃苦教育，逐次升级，最后以纸箱装置艺术回收伏笔。'}};
+const shots=Object.entries(source.shots).map(([id,text])=>{
+ const section=heading=>text.match(new RegExp('(?:^|\\n)'+heading+'\\r?\\n([^\\r\\n]*)'))?.[1]||'';
+ const [,start,end]=text.match(/计划时间：([\d.]+)[–-]([\d.]+)/);
+ return {id,title:text.split(/\r?\n/)[0].split(' · ')[1],sceneId:text.match(/场次：(\w+)/)?.[1],
+  start:Number(start),end:Number(end),action:section('画面动作'),framing:section('景别'),angle:section('机位'),
+  movement:section('运镜'),performance:section('表演'),dialogue:section('对白'),refs:[],
+  confirmedImageId:id,imageCandidates:[{id,image:image(id)}]};
+});
+const episode={id:'sample-episode',name:'第 1 集',revision:38,stage:'分镜设计',data:{
+ inspiration:{idea:'父亲想让女儿吃苦，她却把每件苦差事做出了成绩。'},
+ manuscript,manuscriptConfirmed:{version:38,data:manuscript},
+ assetPack:{scriptVersion:38,policyVersion:1,styleProfile:{preset:'realistic',context:'当代家庭喜剧',palette:'自然生活色调'},items:assets},
+ storyboard:{confirmed:{version:1},shots}}};
+const project={id:'sample',name:'忆苦思甜复刻',type:'single',description:'《吃苦改造计划》 · 第 38 版剧本与原项目资产、分镜节选',
+ cover:image('SH001'),episodes:[{id:episode.id,name:episode.name,stage:episode.stage}],episode_count:1,updated:'2026-11-24T00:00:00Z'};
 const status={fields:{'角色与对象':[]},models:{},budget:{estimated:0,limit:0,reserved:0,available:0},aiEnabled:false};
-const routes={'/api/status':status,'/api/projects':[project],'/api/projects/sample':project,
- '/api/episodes/sample-episode':episode,'/api/tasks':[],'/api/trash':[],'/api/assets':[]};
+const routes={'/api/status':status,'/api/projects':[project],'/api/projects/sample':project,'/api/episodes/sample-episode':episode,
+ '/api/tasks':[],'/api/trash':[],'/api/assets':assets.filter(a=>a.confirmed).map(a=>({...a,version:a.confirmed.version}))};
 export async function demoApi(url,{method='GET'}={}){
  if(method!=='GET')throw Error('公开展示版为只读。');
  return structuredClone(routes[url]??[]);
