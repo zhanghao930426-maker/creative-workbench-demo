@@ -1,4 +1,4 @@
-const cover = './assets/project-reference.svg';
+const cover = './assets/inspiration-cover.svg';
 const assets = [
   {id:'C1',type:'character',name:'程禾',description:'灰色风衣、短发、站在长椅左边。'},
   {id:'C2',type:'character',name:'周远',description:'墨绿夹克、右袖湿透、站在长椅右边。'},
@@ -18,7 +18,7 @@ const manuscript={title:'雨停之前',expanded:true,ready:true,productionAudit:
 const episode={id:'sample-episode',name:'第 1 集',revision:1,stage:'分镜设计',data:{
  inspiration:{idea:'两个陌生人都以为公交站里的伞属于对方。'},
  manuscript,manuscriptConfirmed:{version:1,data:manuscript},
- assetPack:{scriptVersion:1,items:assets},
+ assetPack:{scriptVersion:1,policyVersion:1,styleProfile:{preset:"realistic",context:"当代城市雨天",palette:"冷蓝、湿地暖光"},items:assets},
  storyboard:{confirmed:{version:1},shots:[
  ['全景','两人分立长椅两侧，程禾把蓝伞往右推。','你的伞。'],
  ['近景','周远翻出湿透的袖口。','我要是有伞，就不会这样了。'],
