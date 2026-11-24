@@ -6,8 +6,26 @@ const icons={bulb:'<path d="M9 18h6M10 21h4M8 14a6 6 0 1 1 8 0c-1 1-1 2-1 3H9c0-
 const icon=n=>`<span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true">${icons[n]??icons.folder}</svg></span>`;
 const state={status:null,projects:[],tasks:[],project:null,episode:null,page:'home',tab:'analysis',dimension:'角色与对象',category:'还原复刻',projectFilter:'all',projectView:'grid',trash:[],trashSelection:[],trashQuery:'',projectSort:'recent',projectQuery:'',dirty:false,saving:false,conflict:false,saveLabel:'只读展示',sequence:0};
 let saveTimer,pollTimer,toastTimer;
-import {demoApi} from './demo-data.js';
+import {demoApi} from './demo-data.js?v=2';
 const api=demoApi;
+const unavailableDemoActions = new Set([
+ 'prepare-assets','asset-classify','asset-change-tier','asset-upload','asset-reference','asset-save',
+ 'asset-model','asset-batch-preview','asset-confirm-selected','asset-confirm','asset-style-settings',
+ 'prepare-storyboard','refine-storyboard','confirm-storyboard','refresh-shot-references','save-shot',
+ 'export-storyboard','confirm-before-shot-batch','confirm-before-shot-image','batch-shot-info',
+ 'shot-image-info','share-shot-info','history','edit-project','archive-project','trash-project'
+]);
+function markDemoControls(){
+ for(const field of document.querySelectorAll('.public-demo .workspace-body textarea')) field.readOnly=true;
+ for(const control of document.querySelectorAll('.public-demo .workspace-body select')) control.disabled=true;
+ for(const button of document.querySelectorAll('.public-demo button[data-action]')){
+  if(unavailableDemoActions.has(button.dataset.action)){
+   button.disabled=true;
+   button.title='此操作需要本机工作台';
+  }
+ }
+}
+new MutationObserver(markDemoControls).observe(document.getElementById('app'),{childList:true,subtree:true});
 function toast(text){$('#toast').textContent=text;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),5000);}
 const date=s=>new Date(s).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const badge=(text,tone='')=>`<span class="badge ${tone}">${esc(text)}</span>`;
@@ -135,7 +153,7 @@ function modal(content,wide=false,variant=''){$('#dialog-root').innerHTML=`<div 
 function closeModal(){$('#dialog-root').innerHTML='';}
 async function refreshData(){[state.status,state.projects,state.tasks,state.trash]=await Promise.all([api('/api/status'),api('/api/projects'),api('/api/tasks'),api('/api/trash')]);}
 let previousPageHash='#home',lastPageHash=location.hash||'#home';
-async function route(){if(state.tab==='storyboard')await storyboard.save();if(state.tab==='assets'){try{await assets.saveDetail();}catch(e){toast(e.message);return;}}if(location.hash!=='#settings')previousPageHash=location.hash||'#home';else if(lastPageHash!=='#settings')previousPageHash=lastPageHash;lastPageHash=location.hash||'#home';try{if(state.dirty||state.saving)await flushSave();const parts=location.hash.slice(1).split('/'),page=parts[0]||'home';state.page=page;state.project=null;state.episode=null;await refreshData();if(page==='project'){state.project=await api('/api/projects/'+parts[1]);const episodeId=parts[2]||state.project.episodes[0].id;state.episode=await api('/api/episodes/'+episodeId);if(!state.project.episodes.some(e=>e.id===episodeId))throw Error('创作内容不属于此项目');state.tab=state.episode.data.source||state.episode.data.analysis?.summary||state.episode.data.manuscript?.storyText?(state.episode.data.inspiration&&!state.episode.data.source?(state.episode.data.manuscript?'manuscript':'candidates'):'analysis'):state.episode.data.inspiration?'candidates':'start';state.category='还原复刻';state.saveLabel='只读展示';state.conflict=false;state.dirty=false;state.sequence=0;workspace();checkLocalDraft();}else if(page==='projects')projects();else if(page==='trash')trashPage();else if(page==='settings')settings();else if(page==='profile')profilePage();else if(page==='library')await assets.library();else{state.page='home';home();}document.querySelectorAll("textarea").forEach(el=>el.readOnly=true);bindErrorImages();window.scrollTo(0,0);}catch(e){toast(e.message);if(state.episode&&state.dirty)return;state.page='home';state.project=null;home();}}
+async function route(){if(state.tab==='storyboard')await storyboard.save();if(state.tab==='assets'){try{await assets.saveDetail();}catch(e){toast(e.message);return;}}if(location.hash!=='#settings')previousPageHash=location.hash||'#home';else if(lastPageHash!=='#settings')previousPageHash=lastPageHash;lastPageHash=location.hash||'#home';try{if(state.dirty||state.saving)await flushSave();const parts=location.hash.slice(1).split('/'),page=parts[0]||'home';state.page=page;state.project=null;state.episode=null;await refreshData();if(page==='project'){state.project=await api('/api/projects/'+parts[1]);const episodeId=parts[2]||state.project.episodes[0].id;state.episode=await api('/api/episodes/'+episodeId);if(!state.project.episodes.some(e=>e.id===episodeId))throw Error('创作内容不属于此项目');state.tab=state.episode.data.source||state.episode.data.analysis?.summary||state.episode.data.manuscript?.storyText?(state.episode.data.inspiration&&!state.episode.data.source?(state.episode.data.manuscript?'manuscript':'candidates'):'analysis'):state.episode.data.inspiration?'candidates':'start';state.category='还原复刻';state.saveLabel='只读展示';state.conflict=false;state.dirty=false;state.sequence=0;workspace();checkLocalDraft();}else if(page==='projects')projects();else if(page==='trash')trashPage();else if(page==='settings')settings();else if(page==='profile')profilePage();else if(page==='library')await assets.library();else{state.page='home';home();}bindErrorImages();window.scrollTo(0,0);}catch(e){toast(e.message);if(state.episode&&state.dirty)return;state.page='home';state.project=null;home();}}
 function sizeSummary(){const el=document.getElementById('summary');if(el){el.style.height='auto';el.style.height=el.scrollHeight+2+'px';}}
 window.addEventListener('resize',sizeSummary);
 function bindErrorImages(){sizeSummary();document.querySelectorAll('[data-hide-error]').forEach(img=>img.addEventListener('error',()=>img.remove(),{once:true}));}
